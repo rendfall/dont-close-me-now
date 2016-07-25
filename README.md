@@ -1,6 +1,6 @@
 # Don't close me now
 
-> Prevent your browser from closing one and more tabs open.
+> Prevent your browser from closing by accident.
 
 <img src="./assets/images/dont-close-me-now.png" width="407" height="610" style="display:block">
 
@@ -8,7 +8,7 @@
 
 - Open [link](http://rendfall.github.io/dont-close-me-now)
 - Keep tab as pinned one [optional]
-- Enjoy the prompt whenever you try to close Chrome accidentally
+- Enjoy the prompt whenever you try to close your browser accidentally
 
 ## Features
 
