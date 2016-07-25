@@ -6,7 +6,7 @@
 
 ## Usage
 
-- Open [link](http://rendfall.github.io/dont-close-me-now)
+- Open [link](http://rendfall.pl/dont-close-me-now/)
 - Keep tab as pinned one [optional]
 - Enjoy the prompt whenever you try to close your browser accidentally
 
