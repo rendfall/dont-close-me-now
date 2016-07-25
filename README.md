@@ -1,6 +1,6 @@
 # Don't close me now
 
-> Page to prevent browser from closing one and more tabs open.
+> Prevent your browser from closing one and more tabs open.
 
 <img src="./assets/images/dont-close-me-now.png" width="407" height="610" style="display:block">
 
@@ -13,4 +13,4 @@
 ## Features
 
 - Native browser prompt to prevent accidentally close
-- Random images from (unsplash.it)[https://unsplash.it]
+- Random images from [unsplash.it](https://unsplash.it)
