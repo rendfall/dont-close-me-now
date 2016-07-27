@@ -18,7 +18,7 @@
         $cover.classList.add('loading');
 
         // Force transition delay.
-        setTimeout(function () {
+        root.setTimeout(function () {
             $cover.src = buildImageURL();
 
             if (typeof cb === 'function') {
@@ -31,11 +31,11 @@
     }
 
     function loop() {
-        clearTimeout(timeoutID);
+        root.clearTimeout(timeoutID);
         
         refreshImage(function () {
-            timeoutID = setTimeout(loop, REFRESH_DELAY);
-        })
+            timeoutID = root.setTimeout(loop, REFRESH_DELAY);
+        });
     }
 
     root.onload = function () {
@@ -43,11 +43,11 @@
 
         $cover.addEventListener('click', function () {
             refreshImage();
-        })
+        });
     }
 
     root.addEventListener('blur', function () {
-        clearTimeout(timeoutID);
+        root.clearTimeout(timeoutID);
     });
 
     root.addEventListener('focus', function () {
@@ -55,6 +55,6 @@
     });
 
     root.onbeforeunload = function (e) {
-        return confirm('Are you sure?');
+        return 'Do you really want to close?';
     }
 })(window);
