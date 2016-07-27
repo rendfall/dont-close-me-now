@@ -42,7 +42,7 @@
         loop();
 
         $cover.addEventListener('click', function () {
-            refreshImage();
+            loop();
         });
     }
 
