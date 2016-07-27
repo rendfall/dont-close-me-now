@@ -1,4 +1,4 @@
-(function (root) {
+(function (root, undefined) {
     'use strict';
 
     var REFRESH_DELAY = 11 * 1000; // 11 seconds
@@ -57,4 +57,4 @@
     root.onbeforeunload = function (e) {
         return confirm('Are you sure?');
     }
-})(window, undefined);
+})(window);
