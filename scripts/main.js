@@ -38,13 +38,13 @@
         });
     }
 
-    root.onload = function () {
+    root.addEventListener('load', function () {
         loop();
 
         $cover.addEventListener('click', function () {
             loop();
         });
-    }
+    });
 
     root.addEventListener('blur', function () {
         root.clearTimeout(timeoutID);
@@ -54,7 +54,7 @@
         loop();
     });
 
-    root.onbeforeunload = function (e) {
+    root.addEventListener('beforeunload', function (e) {
         return 'Do you really want to close?';
-    }
+    });
 })(window);
