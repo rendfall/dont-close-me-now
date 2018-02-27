@@ -32,7 +32,7 @@
 
     function loop() {
         root.clearTimeout(timeoutID);
-        
+
         refreshImage(function () {
             timeoutID = root.setTimeout(loop, REFRESH_DELAY);
         });
@@ -55,6 +55,9 @@
     });
 
     root.addEventListener('beforeunload', function (e) {
-        return 'Do you really want to close?';
+        var confirmationMessage = 'Do you really want to close?';
+
+        e.returnValue = confirmationMessage;
+        return confirmationMessage;
     });
 })(window);
