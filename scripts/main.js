@@ -8,8 +8,12 @@
     };
     const APP_CONFIG = {
         REFRESH_INTERVAL: 6 * ONE_SECOND,
-        API_URL: 'https://unsplash.it'
+        API_URL: 'https://picsum.photos'
     };
+
+    function buildImageSource() {
+        return `${APP_CONFIG.API_URL}/${window.outerWidth}/${window.outerHeight}/?time=${Date.now()}`;
+    }
 
     // function fadeIn(layer, display = 'block'){
     //     layer.setStyle({
@@ -45,8 +49,77 @@
     //     })();
     // }
 
-    function getRandomImageSrc() {
-        return `${APP_CONFIG.API_URL}/${window.outerWidth}/${window.outerHeight}/?random&time=${Date.now()}`;
+    class Slider {
+        constructor() {
+            this.$image = new Image();
+            this.isCancelRequested = false;
+            this.loopId = null;
+
+            this.setupListeners();
+        }
+
+        onLoaded() {}
+        onError() {}
+        onLoading() {}
+
+        setupListeners() {
+            this.$image.addEventListener('load', (event) => {
+                if (this.isCancelRequested) {
+                    return;
+                }
+
+                this.onLoaded(event.target.src);
+                this.startLoop();
+            });
+
+            this.$image.addEventListener('error', (error) => {
+                if (this.isCancelRequested) {
+                    return;
+                }
+
+                this.onError(error);
+                this.startLoop();
+            });
+        }
+
+        get image$() {
+            const api = {
+                onLoaded: (fn) => {
+                    this.onLoaded = fn;
+                    return api;
+                },
+                onError: (fn) => {
+                    this.onError = fn;
+                    return api;
+                },
+                onLoading: (fn) => {
+                    this.onLoading = fn;
+                    return api;
+                }
+            };
+
+            return api;
+        }
+
+        startLoop() {
+            const src = buildImageSource();
+
+            this.loopId = window.setTimeout(() => {
+                this.onLoading(src);
+                this.$image.src = src;
+            }, APP_CONFIG.REFRESH_INTERVAL);
+        }
+
+        stopLoop() {
+            this.$image.src = '';
+            this.isCancelRequested = true;
+            window.clearTimeout(this.loopId);
+            this.loopId = null;
+        }
+
+        render($target) {
+            $target.appendChild(this.$image);
+        }
     }
 
     class CloseBrowserPreventer {
@@ -104,9 +177,7 @@
         constructor() {
             this.layers = new Map();
             this.currentLayer = null;
-            this.loopId = null;
             this.closePreventer = null;
-            this.$image = null;
 
             this.setupLayers();
             this.setupCloseBrowserPreventer();
@@ -124,23 +195,11 @@
 
         setupSlider() {
             const sliderLayer = this.layers.get(LAYERS.SLIDER);
-            const $image = new Image();
-            sliderLayer.$.appendChild($image);
+            const slider = new Slider();
 
-            // sliderLayer.on('click', () => {
-            //     if (this.loopId === null) {
-            //         this.nextImage();
-            //     } else {
-            //         this.resetLoop();
-            //     }
-            // });
+            slider.render(sliderLayer.$);
 
-            $image.addEventListener('load', () => {
-                this.switchLayer(LAYERS.SLIDER);
-                this.nextImage();
-            });
-
-            this.$image = $image;
+            this.slider = slider;
         }
 
         switchLayer(layerId) {
@@ -161,23 +220,6 @@
             });
         }
 
-        nextImage() {
-            this.resetLoop();
-            this.loopId = window.setTimeout(() => {
-                this.renderImage();
-            }, APP_CONFIG.REFRESH_INTERVAL);
-        }
-
-        resetLoop() {
-            window.clearTimeout(this.loopId);
-            this.loopId = null;
-        }
-
-        renderImage() {
-            this.switchLayer(LAYERS.LOADER);
-            this.$image.src = getRandomImageSrc();
-        }
-
         setupCloseBrowserPreventer() {
             this.closePreventer = new CloseBrowserPreventer();
             this.closePreventer.enable();
@@ -193,8 +235,28 @@
             clickItLayer.on('click', () => {
                 this.switchLayer(LAYERS.LOADER);
                 clickItLayer.destroy();
-                this.nextImage();
+
+                this.startSlider();
             });
+        }
+
+        startSlider() {
+            this.slider.image$
+                .onLoading((src) => {
+                    this.switchLayer(LAYERS.LOADER);
+                })
+                .onLoaded((src) => {
+                    this.switchLayer(LAYERS.SLIDER);
+                })
+                .onError((error) => {
+                    console.error(error);
+                });
+
+            this.slider.startLoop();
+        }
+
+        stopSlider() {
+            this.slider.stopLoop();
         }
     }
 
