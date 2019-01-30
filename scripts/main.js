@@ -115,9 +115,12 @@
 
         startLoop() {
             this.isRunning = true;
+            this.isCancelRequested = false;
+            this.clearBuffer();
+            window.clearTimeout(this.loopId);
             this.showLoader();
-            this.nextLoop();
             this.$container.classList.remove('paused');
+            this.nextLoop();
         }
 
         pauseLoop() {
