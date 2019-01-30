@@ -16,6 +16,7 @@
 
     class Slider {
         constructor() {
+            this.$container = null;
             this.$image = new Image();
             this.$buffer = new Image();
             this.$loader = document.createElement('div');
@@ -116,6 +117,7 @@
             this.isRunning = true;
             this.showLoader();
             this.nextLoop();
+            this.$container.classList.remove('paused');
         }
 
         pauseLoop() {
@@ -124,9 +126,11 @@
             this.clearBuffer();
             window.clearTimeout(this.loopId);
             this.loopId = null;
+            this.$container.classList.add('paused');
         }
 
         render(layer) {
+            this.$container = layer.$;
             layer.append(this.$loader);
             layer.append(this.$image);
         }
