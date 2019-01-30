@@ -15,43 +15,10 @@
         return `${APP_CONFIG.API_URL}/${window.outerWidth}/${window.outerHeight}/?time=${Date.now()}`;
     }
 
-    // function fadeIn(layer, display = 'block'){
-    //     layer.setStyle({
-    //         opacity: 0,
-    //         display
-    //     });
-    //
-    //     (function fade() {
-    //         const currentValue = layer.getStyle('opacity');
-    //         const nextValue = Number.parseFloat(currentValue) + 0.1;
-    //
-    //         if (nextValue <= 1) {
-    //             layer.setStyle({ opacity: nextValue });
-    //             requestAnimationFrame(fade);
-    //         }
-    //     })();
-    // }
-    //
-    // function fadeOut(layer, display = 'block'){
-    //     layer.setStyle({
-    //         opacity: 1,
-    //         display
-    //     });
-    //
-    //     (function fade() {
-    //         const currentValue = layer.getStyle('opacity');
-    //         const nextValue = Number.parseFloat(currentValue) - 0.1;
-    //
-    //         if (nextValue >= 0) {
-    //             layer.setStyle({ opacity: nextValue });
-    //             requestAnimationFrame(fade);
-    //         }
-    //     })();
-    // }
-
     class Slider {
         constructor() {
             this.$image = new Image();
+            this.$buffer = new Image();
             this.isCancelRequested = false;
             this.loopId = null;
 
@@ -63,12 +30,14 @@
         onLoading() {}
 
         setupListeners() {
-            this.$image.addEventListener('load', (event) => {
+            this.$buffer.addEventListener('load', (event) => {
                 if (this.isCancelRequested) {
                     return;
                 }
 
-                this.onLoaded(event.target.src);
+                const src = event.target.src;
+                this.setImage(src);
+                this.onLoaded(src);
                 this.startLoop();
             });
 
@@ -80,6 +49,18 @@
                 this.onError(error);
                 this.startLoop();
             });
+        }
+
+        setImage(src) {
+            this.$image.src = src;
+        }
+
+        loadImage(src) {
+            this.$buffer.src = src;
+        }
+
+        clearBuffer() {
+            this.$buffer.src = '';
         }
 
         get image$() {
@@ -106,19 +87,15 @@
 
             this.loopId = window.setTimeout(() => {
                 this.onLoading(src);
-                this.$image.src = src;
+                this.loadImage(src);
             }, APP_CONFIG.REFRESH_INTERVAL);
         }
 
         stopLoop() {
-            this.$image.src = '';
             this.isCancelRequested = true;
+            this.clearBuffer();
             window.clearTimeout(this.loopId);
             this.loopId = null;
-        }
-
-        render($target) {
-            $target.appendChild(this.$image);
         }
     }
 
@@ -144,6 +121,8 @@
     class Layer {
         constructor(id) {
             this.id = id;
+            this.topIndex = 99;
+            this.bottomIndex = 9;
             this.$ = document.getElementById(id);
             this.hide();
         }
@@ -153,15 +132,25 @@
         }
 
         hide() {
-            this.$.style.zIndex = -9999;
+            this.setStyle({
+                opacity: 0,
+                zIndex: this.bottomIndex
+            });
+        }
+
+        append($element) {
+            this.$.appendChild($element);
         }
 
         show() {
-            this.$.style.zIndex = 9999;
+            this.setStyle({
+                opacity: 1,
+                zIndex: this.topIndex
+            });
         }
 
-        setStyle(obj) {
-            Object.assign(this.$.style, obj);
+        setStyle(styles) {
+            Object.assign(this.$.style, styles);
         }
 
         getStyle(name) {
@@ -197,7 +186,7 @@
             const sliderLayer = this.layers.get(LAYERS.SLIDER);
             const slider = new Slider();
 
-            slider.render(sliderLayer.$);
+            sliderLayer.append(slider.$image);
 
             this.slider = slider;
         }
