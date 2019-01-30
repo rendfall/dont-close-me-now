@@ -11,7 +11,7 @@
     };
 
     function buildImageSource() {
-        return `${APP_CONFIG.API_URL}/${window.outerWidth}/${window.outerHeight}/?time=${Date.now()}`;
+        return `${APP_CONFIG.API_URL}/${window.outerWidth}/${window.outerHeight}/?random=${Date.now()}`;
     }
 
     class Slider {
