@@ -12,6 +12,10 @@ html, body {
     background-position: center center;
 }
 
+.clickable {
+    cursor: pointer;
+}
+
 .layer {
     position: fixed;
     left: 0;
@@ -25,19 +29,31 @@ html, body {
     transition: opacity 500ms ease-in-out;
 }
 
-.loader {
+.slider .loader {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
     background-color: #fff;
     background-image: url('../images/loader.gif');
     background-repeat: no-repeat;
     background-position: center center;
 }
 
+.slider .loader,
+.slider .image {
+    -webkit-transition: opacity 500ms ease-in-out;
+    -moz-transition: opacity 500ms ease-in-out;
+    -o-transition: opacity 500ms ease-in-out;
+    transition: opacity 500ms ease-in-out;
+}
+
 .click-it {
     display: flex;
     justify-content: center;
     align-content: center;
-
-    cursor: pointer;
 }
 @keyframes glitterAndScale {
     0% { opacity: 0.1; transform: scale(1.0); }

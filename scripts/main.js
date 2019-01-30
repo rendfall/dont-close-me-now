@@ -1,7 +1,6 @@
 {
     const ONE_SECOND = 1e3;
     const LAYERS = {
-        LOADER: 'loader',
         CLICK_IT: 'click-it',
         OFFLINE: 'offline',
         SLIDER: 'slider'
@@ -19,15 +18,39 @@
         constructor() {
             this.$image = new Image();
             this.$buffer = new Image();
+            this.$loader = document.createElement('div');
+
+            this.isRunning = false;
             this.isCancelRequested = false;
             this.loopId = null;
 
+            this.setupLoader();
+            this.setupImage();
             this.setupListeners();
         }
 
         onLoaded() {}
         onError() {}
-        onLoading() {}
+
+        setupImage() {
+            this.$image.classList.add('image');
+        }
+
+        setupLoader() {
+            this.$loader.classList.add('loader');
+        }
+
+        showLoader() {
+            this.$loader.style.opacity = 1;
+            this.$image.style.opacity = 0;
+
+        }
+
+        hideLoader() {
+            this.$loader.style.opacity = 0;
+            this.$image.style.opacity = 1;
+
+        }
 
         setupListeners() {
             this.$buffer.addEventListener('load', (event) => {
@@ -37,8 +60,9 @@
 
                 const src = event.target.src;
                 this.setImage(src);
+                this.hideLoader();
                 this.onLoaded(src);
-                this.startLoop();
+                this.nextLoop();
             });
 
             this.$image.addEventListener('error', (error) => {
@@ -47,15 +71,17 @@
                 }
 
                 this.onError(error);
-                this.startLoop();
+                this.nextLoop();
             });
         }
 
         setImage(src) {
+            this.hideLoader();
             this.$image.src = src;
         }
 
         loadImage(src) {
+            this.showLoader();
             this.$buffer.src = src;
         }
 
@@ -72,30 +98,37 @@
                 onError: (fn) => {
                     this.onError = fn;
                     return api;
-                },
-                onLoading: (fn) => {
-                    this.onLoading = fn;
-                    return api;
                 }
             };
 
             return api;
         }
 
-        startLoop() {
+        nextLoop() {
             const src = buildImageSource();
 
             this.loopId = window.setTimeout(() => {
-                this.onLoading(src);
                 this.loadImage(src);
             }, APP_CONFIG.REFRESH_INTERVAL);
         }
 
-        stopLoop() {
+        startLoop() {
+            this.isRunning = true;
+            this.showLoader();
+            this.nextLoop();
+        }
+
+        pauseLoop() {
+            this.isRunning = false;
             this.isCancelRequested = true;
             this.clearBuffer();
             window.clearTimeout(this.loopId);
             this.loopId = null;
+        }
+
+        render(layer) {
+            layer.append(this.$loader);
+            layer.append(this.$image);
         }
     }
 
@@ -186,7 +219,19 @@
             const sliderLayer = this.layers.get(LAYERS.SLIDER);
             const slider = new Slider();
 
-            sliderLayer.append(slider.$image);
+            sliderLayer.on('click', () => {
+                this.toggleSlider();
+            });
+
+            slider.image$
+                .onLoaded((src) => {
+                    this.switchLayer(LAYERS.SLIDER);
+                })
+                .onError((error) => {
+                    console.error(error);
+                });
+
+            slider.render(sliderLayer);
 
             this.slider = slider;
         }
@@ -222,30 +267,24 @@
             const clickItLayer = this.layers.get(LAYERS.CLICK_IT);
 
             clickItLayer.on('click', () => {
-                this.switchLayer(LAYERS.LOADER);
-                clickItLayer.destroy();
-
+                this.switchLayer(LAYERS.SLIDER);
                 this.startSlider();
+                clickItLayer.destroy();
             });
         }
 
-        startSlider() {
-            this.slider.image$
-                .onLoading((src) => {
-                    this.switchLayer(LAYERS.LOADER);
-                })
-                .onLoaded((src) => {
-                    this.switchLayer(LAYERS.SLIDER);
-                })
-                .onError((error) => {
-                    console.error(error);
-                });
+        toggleSlider() {
+            this.slider.isRunning
+                ? this.pauseSlider()
+                : this.startSlider();
+        }
 
+        startSlider() {
             this.slider.startLoop();
         }
 
-        stopSlider() {
-            this.slider.stopLoop();
+        pauseSlider() {
+            this.slider.pauseLoop();
         }
     }
 
