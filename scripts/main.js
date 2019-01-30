@@ -1,98 +1,304 @@
-((root, undefined) => {
+{
     const ONE_SECOND = 1e3;
+    const LAYERS = {
+        CLICK_IT: 'click-it',
+        OFFLINE: 'offline',
+        SLIDER: 'slider'
+    };
+    const APP_CONFIG = {
+        REFRESH_INTERVAL: 6 * ONE_SECOND,
+        API_URL: 'https://picsum.photos'
+    };
 
-    class App {
-        static get CONFIG() {
-            return {
-                REFRESH_DELAY: 6, // Seconds;
-                API_URL: 'https://unsplash.it'
-            }
-        };
+    function buildImageSource() {
+        return `${APP_CONFIG.API_URL}/${window.outerWidth}/${window.outerHeight}/?random=${Date.now()}`;
+    }
 
-        constructor(id) {
-            this.$image = root.document.getElementById(id);
-            this.$state = root.document.getElementById('state');
-            this.loop = null;
-            this.isLoopRunning = false;
+    class Slider {
+        constructor() {
+            this.$container = null;
+            this.$image = new Image();
+            this.$buffer = new Image();
+            this.$loader = document.createElement('div');
 
+            this.isRunning = false;
+            this.isCancelRequested = false;
+            this.loopId = null;
+
+            this.setupLoader();
+            this.setupImage();
             this.setupListeners();
-            this.initialize();
+        }
+
+        onLoaded() {}
+        onError() {}
+
+        setupImage() {
+            this.$image.classList.add('image');
+        }
+
+        setupLoader() {
+            this.$loader.classList.add('loader');
+        }
+
+        showLoader() {
+            this.$loader.style.opacity = 1;
+            this.$image.style.opacity = 0;
+
+        }
+
+        hideLoader() {
+            this.$loader.style.opacity = 0;
+            this.$image.style.opacity = 1;
+
         }
 
         setupListeners() {
-            root.addEventListener('beforeunload', (evt) => {
-                const confirmationMessage = 'Do you really want to close?';
-                evt.returnValue = confirmationMessage;
-                return confirmationMessage;
+            this.$buffer.addEventListener('load', (event) => {
+                if (this.isCancelRequested) {
+                    return;
+                }
+
+                const src = event.target.src;
+                this.setImage(src);
+                this.hideLoader();
+                this.onLoaded(src);
+                this.nextLoop();
             });
 
-            root.addEventListener('click', () => {
-                this.isLoopRunning
-                    ? this.stopLoop()
-                    : this.startLoop();
-            })
-        }
+            this.$image.addEventListener('error', (error) => {
+                if (this.isCancelRequested) {
+                    return;
+                }
 
-        initialize() {
-            this.startLoop();
-        }
-
-        buildImageUrl() {
-            const { clientWidth, clientHeight } = this.$image;
-            const now = Date.now();
-            return `https://unsplash.it/${clientWidth}/${clientHeight}/?random&time=${now}`;
-        }
-
-        renderImage(src) {
-            const { $image } = this;
-
-            $image.classList.add('loading');
-            $image.addEventListener('load', () => {
-                $image.classList.remove('loading');
+                this.onError(error);
+                this.nextLoop();
             });
-            $image.src = src;
+        }
+
+        setImage(src) {
+            this.hideLoader();
+            this.$image.src = src;
+        }
+
+        loadImage(src) {
+            this.showLoader();
+            this.$buffer.src = src;
+        }
+
+        clearBuffer() {
+            this.$buffer.src = '';
+        }
+
+        get image$() {
+            const api = {
+                onLoaded: (fn) => {
+                    this.onLoaded = fn;
+                    return api;
+                },
+                onError: (fn) => {
+                    this.onError = fn;
+                    return api;
+                }
+            };
+
+            return api;
+        }
+
+        nextLoop() {
+            const src = buildImageSource();
+
+            this.loopId = window.setTimeout(() => {
+                this.loadImage(src);
+            }, APP_CONFIG.REFRESH_INTERVAL);
         }
 
         startLoop() {
-            const { REFRESH_DELAY } = App.CONFIG;
-
-            let accumulatedTime = 0;
-            let lastTime = 0;
-
-            const nextStep = (deltaTime) => {
-                accumulatedTime += (deltaTime - lastTime) / ONE_SECOND;
-                lastTime = deltaTime;
-
-                if (accumulatedTime > REFRESH_DELAY) {
-                    this.clockTick(lastTime / ONE_SECOND);
-                    accumulatedTime = 0;
-                }
-
-                this.loop = root.requestAnimationFrame(nextStep);
-            };
-
-            this.clockTick(0);
-            this.loop = root.requestAnimationFrame(nextStep);
-            this.isLoopRunning = true;
-            this.$state.classList.remove('paused');
+            this.isRunning = true;
+            this.isCancelRequested = false;
+            this.clearBuffer();
+            window.clearTimeout(this.loopId);
+            this.showLoader();
+            this.$container.classList.remove('paused');
+            this.nextLoop();
         }
 
-        stopLoop() {
-            window.cancelAnimationFrame(this.loop);
-            this.isLoopRunning = false;
-            this.$state.classList.add('paused');
+        pauseLoop() {
+            this.isRunning = false;
+            this.isCancelRequested = true;
+            this.clearBuffer();
+            window.clearTimeout(this.loopId);
+            this.loopId = null;
+            this.$container.classList.add('paused');
         }
 
-        clockTick(time) {
-            const imageSrc = this.buildImageUrl();
-            this.renderImage(imageSrc);
+        render(layer) {
+            this.$container = layer.$;
+            layer.append(this.$loader);
+            layer.append(this.$image);
         }
     }
 
-    root.addEventListener('DOMContentLoaded', () => {
-        new App('image');
+    class CloseBrowserPreventer {
+        constructor() {
+            this.confirmationMessage = 'Do you really want to close?';
+        }
+
+        enable() {
+            window.addEventListener('beforeunload', this.handler);
+        }
+
+        disable() {
+            window.removeEventListener('beforeunload', this.handler);
+        }
+
+        handler(evt) {
+            evt.returnValue = this.confirmationMessage;
+            return this.confirmationMessage;
+        }
+    }
+
+    class Layer {
+        constructor(id) {
+            this.id = id;
+            this.topIndex = 99;
+            this.bottomIndex = 9;
+            this.$ = document.getElementById(id);
+            this.hide();
+        }
+
+        on(eventName, fn) {
+            this.$.addEventListener(eventName, fn);
+        }
+
+        hide() {
+            this.setStyle({
+                opacity: 0,
+                zIndex: this.bottomIndex
+            });
+        }
+
+        append($element) {
+            this.$.appendChild($element);
+        }
+
+        show() {
+            this.setStyle({
+                opacity: 1,
+                zIndex: this.topIndex
+            });
+        }
+
+        setStyle(styles) {
+            Object.assign(this.$.style, styles);
+        }
+
+        getStyle(name) {
+            return this.$.style[name];
+        }
+
+        destroy() {
+            this.$.remove();
+        }
+    }
+
+    class App {
+        constructor() {
+            this.layers = new Map();
+            this.currentLayer = null;
+            this.closePreventer = null;
+
+            this.setupLayers();
+            this.setupCloseBrowserPreventer();
+            this.setupUserClickRequest();
+            this.setupSlider();
+            this.initialize();
+        }
+
+        setupLayers() {
+            Object.values(LAYERS)
+                .forEach((id) => {
+                    this.layers.set(id, new Layer(id));
+                });
+        }
+
+        setupSlider() {
+            const sliderLayer = this.layers.get(LAYERS.SLIDER);
+            const slider = new Slider();
+
+            sliderLayer.on('click', () => {
+                this.toggleSlider();
+            });
+
+            slider.image$
+                .onLoaded((src) => {
+                    this.switchLayer(LAYERS.SLIDER);
+                })
+                .onError((error) => {
+                    console.error(error);
+                });
+
+            slider.render(sliderLayer);
+
+            this.slider = slider;
+        }
+
+        switchLayer(layerId) {
+            const currentLayerId = this.currentLayer && this.currentLayer.id;
+            if (currentLayerId === layerId) {
+                return;
+            }
+
+            const nextLayer = this.layers.get(layerId);
+            this.currentLayer = nextLayer;
+
+            this.layers.forEach((layer) => {
+                if (layer.id === nextLayer.id) {
+                    layer.show();
+                } else {
+                    layer.hide();
+                }
+            });
+        }
+
+        setupCloseBrowserPreventer() {
+            this.closePreventer = new CloseBrowserPreventer();
+            this.closePreventer.enable();
+        }
+
+        initialize() {
+            this.switchLayer(LAYERS.CLICK_IT);
+        }
+
+        setupUserClickRequest() {
+            const clickItLayer = this.layers.get(LAYERS.CLICK_IT);
+
+            clickItLayer.on('click', () => {
+                this.switchLayer(LAYERS.SLIDER);
+                this.startSlider();
+                clickItLayer.destroy();
+            });
+        }
+
+        toggleSlider() {
+            this.slider.isRunning
+                ? this.pauseSlider()
+                : this.startSlider();
+        }
+
+        startSlider() {
+            this.slider.startLoop();
+        }
+
+        pauseSlider() {
+            this.slider.pauseLoop();
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        new App();
     }, {
         passive: true,
         once: true
     });
-})(this);
+}
